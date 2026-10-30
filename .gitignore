@@ -1,0 +1,11 @@
+# useless dependencies
+package-lock.json
+node_modules/
+__pycache__/
+coverage/
+dist/
+
+# critical API keys
+.env
+canopiq-*.json
+geospatial-ai-assistant-*.json

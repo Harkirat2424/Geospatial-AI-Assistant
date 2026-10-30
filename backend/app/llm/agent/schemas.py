@@ -1,0 +1,69 @@
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import List, Literal
+from datetime import date
+
+class RequestClassification(BaseModel):
+	"""Classifies the entry intent of a user prompt."""
+	
+	route: Literal["geospatial_analysis", "conversational", "impossible_request", "error"] = Field(
+		description="Categorize the user intent before execution mapping."
+	)
+
+
+class GeoSpatialQuery(BaseModel): 
+	"""Query for GIS data of a location."""
+
+	location: str = Field(description="Short description for the location.")
+	dataset: Literal["carbon_density", "tree_cover", "land_use_distribution"] = Field(description="Dataset to query for the analysis intent ('carbon_density' or 'tree_cover' or 'land_use_distribution').")
+	latitude: float = Field(ge=-90, le=90, description="Latitude of the target location in decimal degrees (WGS84). Must be between -90 (south) and 90 (north).") 
+	longitude: float = Field(ge=-180, le=180, description="Longitude of the target location in decimal degrees (WGS84). Must be between -180 (west) and 180 (east).") 
+	bbox: list[float] = Field(description="Bounding box coordinates [min_lon, min_lat, max_lon, max_lat].")
+	start_time: date | None = Field(description="Start time for the data range.")
+	end_time: date | None = Field(description="End time for the data range.")
+
+	@field_validator('bbox') 
+	@classmethod 
+	def validate_bbox_logic(cls, val: List[float]) -> List[float]: 
+		min_lon, min_lat, max_lon, max_lat = val 
+		
+		if not (-180 <= min_lon <= 180 and -180 <= max_lon <= 180): 
+			raise ValueError("Bounding box longitudes must be between -180 and 180") 
+		if not (-90 <= min_lat <= 90 and -90 <= max_lat <= 90): 
+			raise ValueError("Bounding box latitudes must be between -90 and 90") 
+		
+		if min_lon >= max_lon: 
+			raise ValueError("min_longitude must be less than max_longitude") 
+		if min_lat >= max_lat: 
+			raise ValueError("min_latitude must be less than max_latitude") 
+		
+		return val 
+	
+	@model_validator(mode='after')
+	def check_date_range(self) -> 'GeoSpatialQuery':
+		if self.dataset == "land_use_distribution":
+			if self.start_time or self.end_time:
+				raise ValueError(
+					"startTime and endTime aren't needed for dataset "
+					f"'{self.dataset}'"
+				)
+			return self
+
+		# A time range is required for carbon density and tree cover time-series.
+		if not self.start_time or not self.end_time:
+			raise ValueError(
+				"startTime and endTime are required for dataset "
+				f"'{self.dataset}'"
+			)
+		if self.start_time >= self.end_time:
+			raise ValueError("startTime must be earlier than endTime")
+		return self
+
+
+class EnvironmentalReport(BaseModel):
+	"""AI Environmental Report based on provided data from GEE"""
+
+	title: str = Field(description="Short environmental report title")
+	report_markdown: str = Field(
+		max_length=5000,
+		description="Objective environmental analysis summary under 5000 characters"
+	)
