@@ -162,3 +162,18 @@ erDiagram
 ├── Makefile                   # Environment orchestration commands
 └── README.md                  # Project overview documentation
 ```
+
+---
+
+## Quickstart
+
+Run the full stack locally with Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+- **Frontend UI**: `http://localhost:5173`
+- **Backend API**: `http://localhost:8000`
+- **Interactive Docs**: `http://localhost:8000/docs`
+

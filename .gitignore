@@ -9,3 +9,8 @@ dist/
 .env
 canopiq-*.json
 geospatial-ai-assistant-*.json
+
+# system & documents
+.DS_Store
+*.pdf
+
